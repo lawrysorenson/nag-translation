@@ -52,7 +52,7 @@ class TrainDataset(Dataset):
                 i = 0
                 for src, tgt in zip(tqdm(src_in.readlines(), desc='Loading dataset'), tgt_in):
                     i += 1
-                    if i == 1000: break # limit input for fast development
+                    if i == 200000: break # limit input for fast development
                     src=src.strip()
                     tgt=tgt.strip()
 
@@ -68,9 +68,12 @@ class TrainDataset(Dataset):
 
         N = len(self.data)
 
-        train_dataset = self.data[:int(N*train)]
-        val_dataset = self.data[int(N*train):-int(N*test)]
-        test_dataset = self.data[-int(N*test):]
+        test_split = max(10000, int(N*test))
+        val_split = max(10000, int(N*val)) + test_split
+
+        train_dataset = self.data[:-val_split]
+        val_dataset = self.data[-val_split:-test_split]
+        test_dataset = self.data[-test_split:]
 
         train_dataset = TrainDataset(tokenizer=self.tokenizer, data=train_dataset, train=True)
         val_dataset = TrainDataset(tokenizer=self.tokenizer, data=val_dataset)
@@ -84,8 +87,8 @@ class TrainDataset(Dataset):
     def __getitem__(self, i):
         src, tgt = self.data[i]
         tgt_mask = copy.copy(tgt)
-        mask_ind = random.randint(0, len(tgt_mask))
-        tgt_mask[mask_ind] = self.mask_id
+        mask_inds = random.sample(range(len(tgt_mask)), int(len(tgt_mask) * 0.3))
+        for i in mask_inds: tgt_mask[i] = self.mask_id
         return src, tgt_mask, tgt
   
     def __len__(self):
