@@ -28,15 +28,14 @@ optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
 if os.path.exists('weights.pt'):
     print('Loading previous checkpoint')
-    model.load_state_dict(torch.load('weights.pt'))
-
+    model.load_state_dict(torch.load('weights.pt', map_location='cpu'))
 
 model.to(device)
 
-for epoch in range(1, 5):
+for epoch in range(1, 51):
 
     model.train()
-    stop = 500
+    stop = 2000
     bar = tqdm(train_loader, total=min(len(train_loader), stop))
     i = 0
     for src, src_mask, tgt_mask, tgt_attn_mask, tgt in map(to_device, bar):

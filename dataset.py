@@ -24,6 +24,7 @@ def get_pad_to_longest(PAD):
         tgt_lens = [len(s) for s in tgt]
         tgt_mask_lens = [len(s) for s in tgt_mask]
         pad_len = max(max(tgt_lens), max(tgt_mask_lens))
+        # tgt_mask_mask = generate_mask(pad_len, [max(i,j) for i,j in zip(tgt_lens, tgt_mask_lens)])
         tgt_mask_mask = generate_mask(pad_len, tgt_mask_lens)
         pad_tgt_mask = [s + [PAD] * (pad_len - len(s)) for s in tgt_mask]
         pad_tgt = [s + [PAD] * (pad_len - len(s)) for s in tgt]
@@ -41,6 +42,7 @@ class TrainDataset(Dataset):
     def __init__(self, tokenizer = None, data = None, path = './data', train=False):
         self.train = train
         self.tokenizer = tokenizer
+        self.vocab_size = len(tokenizer)
         self.mask_id = tokenizer.convert_tokens_to_ids(['<mask>'])[0]
         if data is not None:
             self.data = data
@@ -52,7 +54,7 @@ class TrainDataset(Dataset):
                 i = 0
                 for src, tgt in zip(tqdm(src_in.readlines(), desc='Loading dataset'), tgt_in):
                     i += 1
-                    if i == 200000: break # limit input for fast development
+                    # if i > 100000: break # limit input for fast development
                     src=src.strip()
                     tgt=tgt.strip()
 
@@ -84,11 +86,40 @@ class TrainDataset(Dataset):
     def set_train(self, train = True):
         self.train = train
 
+    def delete_tokens(self, sent, p = 0.1):
+        inds = random.sample(range(len(sent)), max(1, int(len(sent) * p)))
+        for i in sorted(inds, reverse=True): # TODO: optimize to O(n)
+            del sent[i]
+        sent += [self.mask_id] * len(inds)
+        return sent
+
+    def add_tokens(self, sent, p = 0.1):
+        options = list(set(sent))
+        inds = random.choices(range(len(sent)+1), k = max(1, int(len(sent) * p)))
+        for i in inds: # TODO: optimize to O(n)
+            add = options[random.randint(0, len(options)-1)]
+            sent = sent[:i] + [add] + sent[i:]
+        return sent
+
+    def change_tokens(self, sent, p = 0.1):
+        options = list(set(sent))
+        inds = random.sample(range(len(sent)), max(1, int(len(sent) * p)))
+        for i in inds:
+            sent[i] = options[random.randint(0, len(options)-1)]
+        return sent
+
+    def mask_tokens(self, sent, p = 0.1):
+        mask_inds = random.sample(range(len(sent)), max(1, int(len(sent) * p)))
+        for i in mask_inds: sent[i] = self.mask_id
+        return sent
+
     def __getitem__(self, i):
         src, tgt = self.data[i]
         tgt_mask = copy.copy(tgt)
-        mask_inds = random.sample(range(len(tgt_mask)), int(len(tgt_mask) * 0.3))
-        for i in mask_inds: tgt_mask[i] = self.mask_id
+        tgt_mask = self.delete_tokens(tgt_mask)
+        tgt_mask = self.change_tokens(tgt_mask)
+        tgt_mask = self.add_tokens(tgt_mask)
+        tgt_mask = self.mask_tokens(tgt_mask)
         return src, tgt_mask, tgt
   
     def __len__(self):
