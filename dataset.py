@@ -2,7 +2,7 @@
 from torch.utils.data import Dataset, DataLoader
 import os
 from tqdm import tqdm
-import random
+from random import randint, random, seed, sample, choices, shuffle
 import copy
 import torch
 
@@ -83,8 +83,8 @@ class TrainDataset(Dataset):
 
     def train_test_split(self, train=0.8, val=0.1, test=0.1):
         if train + val + test != 1: raise ValueError('Train, val, and test must sum to 1')
-        random.seed(0)
-        random.shuffle(self.data)
+        seed(0)
+        shuffle(self.data)
 
         N = len(self.data)
 
@@ -105,7 +105,8 @@ class TrainDataset(Dataset):
         self.train = train
 
     def delete_tokens(self, sent, p = 0.1):
-        inds = random.sample(range(len(sent)), max(1, int(len(sent) * p)))
+        n = min(len(sent), 1+int(len(sent) * p))
+        inds = sample(range(len(sent)), randint(0, n))
         for i in sorted(inds, reverse=True): # TODO: optimize to O(n)
             del sent[i]
         sent += [self.mask_id] * len(inds)
@@ -113,32 +114,38 @@ class TrainDataset(Dataset):
 
     def add_tokens(self, sent, p = 0.1):
         options = list(set(sent))
-        inds = random.choices(range(len(sent)+1), k = max(1, int(len(sent) * p)))
+        n = min(len(sent), 1+int(len(sent) * p))
+        inds = choices(range(len(sent)+1), k = randint(0, n))
         for i in inds: # TODO: optimize to O(n)
-            add = options[random.randint(0, len(options)-1)]
+            add = options[randint(0, len(options)-1)]
             sent = sent[:i] + [add] + sent[i:]
         return sent
 
     def change_tokens(self, sent, p = 0.1):
         options = list(set(sent))
-        inds = random.sample(range(len(sent)), max(1, int(len(sent) * p)))
+        n = min(len(sent), 1+int(len(sent) * p))
+        inds = sample(range(len(sent)), randint(0, n))
         for i in inds:
-            sent[i] = options[random.randint(0, len(options)-1)]
+            sent[i] = options[randint(0, len(options)-1)]
         return sent
 
     def mask_tokens(self, sent, p = 0.1):
-        mask_inds = random.sample(range(len(sent)), max(1, int(len(sent) * p)))
+        n = min(len(sent), 1+int(len(sent) * p))
+        mask_inds = sample(range(len(sent)), randint(0, n))
         for i in mask_inds: sent[i] = self.mask_id
         return sent
 
+    def augment(self, sent):
+        tgt_mask = copy.copy(sent)
+        if random() < 0.4: tgt_mask = self.delete_tokens(tgt_mask)
+        if random() < 0.4: tgt_mask = self.change_tokens(tgt_mask)
+        if random() < 0.4: tgt_mask = self.add_tokens(tgt_mask)
+        if random() < 0.4: tgt_mask = self.mask_tokens(tgt_mask)
+        return tgt_mask
+
     def __getitem__(self, i):
         src, tgt = self.data[i]
-        tgt_mask = copy.copy(tgt)
-        tgt_mask = self.delete_tokens(tgt_mask)
-        tgt_mask = self.change_tokens(tgt_mask)
-        tgt_mask = self.add_tokens(tgt_mask)
-        tgt_mask = self.mask_tokens(tgt_mask)
-        return src, tgt_mask, tgt
+        return src, self.augment(tgt), tgt
   
     def __len__(self):
         return len(self.data)

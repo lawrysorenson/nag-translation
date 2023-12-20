@@ -10,8 +10,9 @@ model, tokenizer = get_model_tokenizer()
 
 if os.path.exists('weights.pt'):
     print('Loading previous checkpoint')
-    model.load_state_dict(torch.load('weights.pt', map_location='cpu'))
-    print('point a')
+    model.load_state_dict(torch.load('../weights-chk3.pt', map_location='cpu'))
+    
+print('Finished loading model')
 
 model.eval()
 
