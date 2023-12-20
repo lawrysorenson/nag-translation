@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request
+from inference import infer
 
 app = Flask(__name__)
 
@@ -12,10 +13,8 @@ def translate():
     data = request.form # a multidict containing POST data
     src = data['src']
     tgt = data['tgt']
-    print(src, tgt)
-    pred = 'Hi, how are you?'
-
-
-    print(pred)
-
+    pred = infer([src], [tgt])[0]
     return jsonify(pred=pred)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port='5000', debug=True, use_reloader=False)

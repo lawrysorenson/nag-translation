@@ -38,6 +38,24 @@ def get_pad_to_longest(PAD):
     return pad_to_longest
 
 
+def prep_data(tokenizer, srcs, tgts):
+    srcs = [tokenizer.encode(s) for s in srcs]
+    pad = [tokenizer.pad_token_id] * 5
+    tgt_masks = [tokenizer.encode(s) + pad for s in tgts]
+    tgts = [[] for _ in tgts]
+    batch = list(zip(srcs, tgt_masks, tgts))
+    pad_src, src_mask, pad_tgt_mask, tgt_mask_mask, _ = get_pad_to_longest(pad[0])(batch)
+
+    inputs = dict(
+        input_ids=pad_src,
+        attention_mask=src_mask,
+        decoder_input_ids=pad_tgt_mask,
+        decoder_attention_mask=tgt_mask_mask,
+    )
+
+    return inputs
+
+
 class TrainDataset(Dataset):
     def __init__(self, tokenizer = None, data = None, path = './data', train=False):
         self.train = train
