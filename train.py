@@ -22,7 +22,7 @@ padder = get_pad_to_longest(PAD)
 batch_size = 32
 train_loader = DataLoader(train, batch_size=batch_size, collate_fn=padder, shuffle=True)
 val_loader = DataLoader(val, batch_size=batch_size, collate_fn=padder)
-test_loader = DataLoader(test, batch_size=1, collate_fn=padder, shuffle=True)
+test_loader = DataLoader(test, batch_size=1, collate_fn=padder)
     
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
@@ -32,10 +32,10 @@ if os.path.exists('weights.pt'):
 
 model.to(device)
 
-for epoch in range(1, 51):
+for epoch in range(1, 31):
 
     model.train()
-    stop = 2000
+    stop = 1000
     bar = tqdm(train_loader, total=min(len(train_loader), stop))
     i = 0
     for src, src_mask, tgt_mask, tgt_attn_mask, tgt in map(to_device, bar):

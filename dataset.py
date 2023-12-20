@@ -70,8 +70,8 @@ class TrainDataset(Dataset):
 
         N = len(self.data)
 
-        test_split = max(10000, int(N*test))
-        val_split = max(10000, int(N*val)) + test_split
+        test_split = min(10000, int(N*test))
+        val_split = min(10000, int(N*val)) + test_split
 
         train_dataset = self.data[:-val_split]
         val_dataset = self.data[-val_split:-test_split]
